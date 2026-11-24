@@ -15,7 +15,8 @@ const Proveedor     = require('../models/Proveedor');
 const Orden         = require('../models/Orden');
 const DetalleOrden  = require('../models/DetalleOrden');  // ← ruta corregida
 const Compra        = require('../models/Compra');
-const DetalleCompra = require('../models/DetalleCompra'); // ← sin espacio espúreo
+const DetalleCompra = require('../models/DetalleCompra');
+const Pago          = require('../models/Pago');
 
 // ── Sequelize instance ────────────────────────────────────────────────────────
 const sequelize = new Sequelize(
@@ -53,7 +54,8 @@ Proveedor.init(sequelize);
 Orden.init(sequelize);
 DetalleOrden.init(sequelize);
 Compra.init(sequelize);
-DetalleCompra.init(sequelize);           // ← sin espacio espúreo
+DetalleCompra.init(sequelize);
+Pago.init(sequelize);
 
 // ── Associations ──────────────────────────────────────────────────────────────
 //
@@ -231,6 +233,26 @@ InsumoProducto.belongsTo(Producto, {
   as: 'producto',
 });
 
+// Orden ──< Pago  (cobros de la orden)
+Orden.hasMany(Pago, {
+  foreignKey: 'ordenId',
+  as: 'pagos',
+});
+Pago.belongsTo(Orden, {
+  foreignKey: 'ordenId',
+  as: 'orden',
+});
+
+// Empleado ──< Pago  (empleado que realizó el cobro)
+Empleado.hasMany(Pago, {
+  foreignKey: 'empleadoId',
+  as: 'pagos',
+});
+Pago.belongsTo(Empleado, {
+  foreignKey: 'empleadoId',
+  as: 'empleado',
+});
+
 // ── Exports ───────────────────────────────────────────────────────────────────
 module.exports = {
   sequelize,
@@ -248,4 +270,5 @@ module.exports = {
   DetalleOrden,
   Compra,
   DetalleCompra,
+  Pago,
 };

@@ -40,6 +40,18 @@ const getClienteById = async (id) => {
 };
 
 /**
+ * Cliente mostrador ('Cliente Rápido'): el cliente por defecto de las ventas
+ * sin datos del cliente. El frontend lo carga al iniciar el punto de venta.
+ */
+const getClienteMostrador = async () => {
+  const cliente = await clienteRepository.findMostrador();
+  if (!cliente) {
+    throw new AppError('No hay un cliente mostrador configurado', 404);
+  }
+  return cliente;
+};
+
+/**
  * Crea un nuevo cliente.
  * El email es opcional, pero si se provee debe ser único.
  */
@@ -91,6 +103,13 @@ const deleteCliente = async (id) => {
   const cliente = await clienteRepository.findById(id);
   if (!cliente) throw new AppError('Cliente no encontrado', 404);
 
+  if (cliente.esMostrador) {
+    throw new AppError(
+      'El cliente mostrador es el cliente por defecto de las ventas y no se puede eliminar',
+      409
+    );
+  }
+
   const tieneHistorial = await clienteRepository.hasOrdenes(id);
   if (tieneHistorial) {
     throw new AppError(
@@ -107,6 +126,7 @@ const deleteCliente = async (id) => {
 module.exports = {
   listClientes,
   getClienteById,
+  getClienteMostrador,
   createCliente,
   updateCliente,
   deleteCliente,

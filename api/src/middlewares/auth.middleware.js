@@ -10,7 +10,7 @@ const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET;
  *
  * Verifica el Bearer token del header Authorization.
  * Si es válido, popula req.usuario con el payload decodificado:
- *   { id, nombreUsuario, rol, sucursalId }
+ *   { id, nombreUsuario, rol, sucursalId, empleadoId }
  *
  * Roles disponibles: 'admin' | 'socio' | 'caja'
  */
@@ -31,6 +31,7 @@ const authMiddleware = (req, res, next) => {
       nombreUsuario: decoded.nombreUsuario,
       rol:           decoded.rol,           // 'admin' | 'socio' | 'caja'
       sucursalId:    decoded.sucursalId,
+      empleadoId:    decoded.empleadoId ?? null,
     };
 
     return next();

@@ -20,12 +20,12 @@ module.exports = {
     const now = new Date();
 
     // ── Clientes ──────────────────────────────────────────────────────────────
+    // ('Cliente Rápido', el cliente mostrador, lo crea la migración 16.)
     await queryInterface.bulkInsert('clientes', [
       { nombre: 'Juan Pérez',    telefono: '987-001-001', email: 'juan@email.com',  created_at: now, updated_at: now },
       { nombre: 'Ana García',    telefono: '987-001-002', email: 'ana@email.com',   created_at: now, updated_at: now },
       { nombre: 'Luis Torres',   telefono: '987-001-003', email: null,              created_at: now, updated_at: now },
       { nombre: 'Rosa Mendoza',  telefono: '987-001-004', email: 'rosa@email.com',  created_at: now, updated_at: now },
-      { nombre: 'Cliente Rápido',telefono: null,          email: null,              created_at: now, updated_at: now },
     ]);
 
     // ── Proveedores ───────────────────────────────────────────────────────────
@@ -151,7 +151,7 @@ module.exports = {
       nombre: ['Distribuidora La Merced', 'Carnes del Norte SAC', 'Lácteos San Marcos'],
     });
     await queryInterface.bulkDelete('clientes', {
-      nombre: ['Juan Pérez', 'Ana García', 'Luis Torres', 'Rosa Mendoza', 'Cliente Rápido'],
+      nombre: ['Juan Pérez', 'Ana García', 'Luis Torres', 'Rosa Mendoza'],
     });
   },
 };

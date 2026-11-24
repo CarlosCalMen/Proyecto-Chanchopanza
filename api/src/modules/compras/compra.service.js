@@ -1,7 +1,7 @@
 'use strict';
 
 const compraRepository  = require('./compra.repository');
-const { Insumo }        = require('../../config/db');
+const { Insumo, Proveedor, Sucursal } = require('../../config/db');
 const AppError          = require('../../helpers/AppError');
 const { ESTADO_COMPRA } = require('../../models/Compra');
 
@@ -138,16 +138,36 @@ const getCompraById = async (id) => {
  * Crea una nueva compra con sus detalles.
  * El stock NO se actualiza al crear — solo al pasar a estado 'recibido'.
  *
+ * El empleado sale del token. La sucursal es opcional en el body
+ * (si falta, se usa la del usuario).
+ *
  * @param {object} data
  * @param {number}   data.proveedorId
- * @param {number}   data.sucursalId
- * @param {number}   data.empleadoId
+ * @param {number}   [data.sucursalId]
  * @param {Array}    data.detalles  - [{ insumoId, cantidad, costoUnitario }]
+ * @param {object} usuario - req.usuario
  */
-const createCompra = async (data) => {
+const createCompra = async (data, usuario) => {
+  if (!usuario.empleadoId) {
+    throw new AppError(
+      'Tu usuario no tiene un empleado asociado y no puede registrar operaciones. ' +
+      'Si acabas de recibir el acceso, cierra sesión y vuelve a entrar.',
+      409
+    );
+  }
+
+  const sucursalId = data.sucursalId ? Number(data.sucursalId) : usuario.sucursalId;
+  if (!sucursalId) throw new AppError('El sucursalId es requerido', 422);
+
   if (!data.detalles || data.detalles.length === 0) {
     throw new AppError('La compra debe tener al menos un insumo', 422);
   }
+
+  const sucursal = await Sucursal.findByPk(sucursalId);
+  if (!sucursal || !sucursal.activo) throw new AppError('Sucursal no encontrada o inactiva', 422);
+
+  const proveedor = await Proveedor.findByPk(data.proveedorId);
+  if (!proveedor) throw new AppError('Proveedor no encontrado', 422);
 
   const detallesResueltos = await resolverDetalles(data.detalles);
   const total = detallesResueltos.reduce((sum, d) => sum + d.subtotal, 0);
@@ -157,8 +177,8 @@ const createCompra = async (data) => {
     const compra = await compraRepository.create(
       {
         proveedorId:   data.proveedorId,
-        sucursalId:    data.sucursalId,
-        empleadoId:    data.empleadoId,
+        sucursalId,
+        empleadoId:    usuario.empleadoId,
         fechaDeCompra: new Date(),
         estado:        'pendiente',
         total:         parseFloat(total.toFixed(2)),

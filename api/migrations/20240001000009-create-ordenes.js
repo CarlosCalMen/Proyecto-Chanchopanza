@@ -66,7 +66,8 @@ module.exports = {
   },
 
   async down(queryInterface) {
-    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_ordenes_estado";');
+    // Primero la tabla (depende del ENUM) y después el tipo
     await queryInterface.dropTable('ordenes');
+    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_ordenes_estado";');
   },
 };

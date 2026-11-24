@@ -27,6 +27,18 @@ router.get(
 );
 
 /**
+ * GET /api/clientes/mostrador
+ * Roles: admin, socio, caja
+ * Cliente por defecto de las ventas sin datos del cliente. Debe declararse
+ * ANTES de '/:id', o 'mostrador' se interpretaría como un id.
+ */
+router.get(
+  '/mostrador',
+  roleMiddleware('admin', 'socio', 'caja'),
+  clienteController.getMostrador
+);
+
+/**
  * GET /api/clientes/:id
  * Roles: admin, socio, caja
  */

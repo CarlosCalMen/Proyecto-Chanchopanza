@@ -46,7 +46,8 @@ router.get(
 /**
  * POST /api/compras
  * Roles: admin
- * Body: { proveedorId, sucursalId, empleadoId, detalles: [{ insumoId, cantidad, costoUnitario }] }
+ * Body: { proveedorId, detalles: [{ insumoId, cantidad, costoUnitario }], sucursalId? }
+ * El empleado sale del token; sucursalId es opcional (por defecto, la del usuario).
  *
  * La compra se crea en estado 'pendiente'.
  * El stock de insumos NO se modifica hasta pasar a 'recibido'.

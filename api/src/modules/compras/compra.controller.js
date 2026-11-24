@@ -58,11 +58,12 @@ const getById = async (req, res, next) => {
 /**
  * POST /api/compras
  * Roles: admin
- * Body: { proveedorId, sucursalId, empleadoId, detalles: [{ insumoId, cantidad, costoUnitario }] }
+ * Body: { proveedorId, detalles: [{ insumoId, cantidad, costoUnitario }], sucursalId? }
+ * El empleado se toma del token; sucursalId es opcional (por defecto, la del usuario).
  */
 const create = async (req, res, next) => {
   try {
-    const compra = await compraService.createCompra(req.body);
+    const compra = await compraService.createCompra(req.body, req.usuario);
     return apiResponse.success(res, {
       statusCode: 201,
       message: 'Compra registrada correctamente',

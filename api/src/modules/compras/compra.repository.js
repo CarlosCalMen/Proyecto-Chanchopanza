@@ -1,6 +1,7 @@
 'use strict';
 
 const { Op } = require('sequelize');
+const { whereFechas } = require('../../helpers/dateRange');
 const {
   Compra, DetalleCompra, Insumo,
   Proveedor, Empleado, Sucursal, sequelize,
@@ -42,11 +43,7 @@ const findAll = async ({
   if (empleadoId)  where.empleadoId  = empleadoId;
   if (estado)      where.estado      = estado;
 
-  if (fechaDesde || fechaHasta) {
-    where.fechaDeCompra = {};
-    if (fechaDesde) where.fechaDeCompra[Op.gte] = new Date(fechaDesde);
-    if (fechaHasta) where.fechaDeCompra[Op.lte] = new Date(`${fechaHasta}T23:59:59`);
-  }
+  Object.assign(where, whereFechas('fecha_de_compra', fechaDesde, fechaHasta));
 
   return Compra.findAndCountAll({
     where,

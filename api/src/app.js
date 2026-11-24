@@ -16,6 +16,9 @@ const insumoRoutes    = require('./modules/insumos/insumo.routes');
 const ordenRoutes     = require('./modules/ordenes/orden.routes');
 const compraRoutes    = require('./modules/compras/compra.routes');
 const reporteRoutes   = require('./modules/reportes/reporte.routes');
+const usuarioRoutes   = require('./modules/usuarios/usuario.routes');
+const perfilRoutes    = require('./modules/perfiles/perfil.routes');
+const pagoRoutes      = require('./modules/pagos/pago.routes');
 
 const app = express();
 
@@ -38,6 +41,9 @@ app.use('/api/insumos',    insumoRoutes);
 app.use('/api/ordenes',    ordenRoutes);
 app.use('/api/compras',    compraRoutes);
 app.use('/api/reportes',   reporteRoutes);
+app.use('/api/usuarios',   usuarioRoutes);
+app.use('/api/perfiles',   perfilRoutes);
+app.use('/api/pagos',      pagoRoutes);
 
 // ── 404 ───────────────────────────────────────────────────────────────────────
 app.use((req, res) => {

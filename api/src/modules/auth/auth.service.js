@@ -27,6 +27,7 @@ const buildPayload = (usuario) => ({
   nombreUsuario: usuario.nombreUsuario,
   rol:          usuario.perfil.etiquetaPerfil,   // 'admin' | 'socio' | 'caja'
   sucursalId:   usuario.empleado?.sucursalId ?? null,
+  empleadoId:   usuario.empleado?.id ?? null,
 });
 
 const signAccessToken = (payload) =>
@@ -71,6 +72,7 @@ const login = async (nombreUsuario, plainPassword) => {
       nombreUsuario: usuario.nombreUsuario,
       rol:           usuario.perfil.etiquetaPerfil,
       sucursalId:    payload.sucursalId,
+      empleadoId:    payload.empleadoId,
     },
   };
 };
@@ -110,4 +112,57 @@ const logout = (token) => {
 
 const hashPassword = (plain) => bcrypt.hash(plain, 12);
 
-module.exports = { login, refresh, logout, hashPassword };
+
+/**
+ * Revoca TODOS los refresh tokens de un usuario (cierra sus sesiones).
+ * Se usa al cambiar su contraseña, desactivarlo o cambiarle el perfil.
+ * Los access tokens ya emitidos siguen siendo válidos hasta expirar (15 min).
+ */
+const revokeUserTokens = (usuarioId) => {
+  for (const [hash, entry] of refreshTokenStore.entries()) {
+    if (entry.usuarioId === usuarioId) refreshTokenStore.delete(hash);
+  }
+};
+
+/**
+ * Datos frescos del usuario autenticado (desde la BD, no desde el token).
+ */
+const getMe = async (usuarioId) => {
+  const usuario = await authRepository.findById(usuarioId);
+  if (!usuario || !usuario.activo) throw new AppError('Usuario no encontrado o inactivo', 401);
+
+  const emp = usuario.empleado;
+  return {
+    id:            usuario.id,
+    nombreUsuario: usuario.nombreUsuario,
+    rol:           usuario.perfil.etiquetaPerfil,
+    perfil:        { id: usuario.perfil.id, nombre: usuario.perfil.nombre },
+    empleadoId:    emp?.id ?? null,
+    nombre:        emp?.nombre ?? null,
+    apellidos:     emp?.apellidos ?? null,
+    telefono:      emp?.telefono ?? null,
+    sucursalId:    emp?.sucursalId ?? null,
+    sucursal:      emp?.sucursal ? { id: emp.sucursal.id, nombre: emp.sucursal.nombre } : null,
+  };
+};
+
+/**
+ * Cambio de contraseña del propio usuario.
+ * Exige la contraseña actual y cierra todas sus sesiones.
+ */
+const changePassword = async (usuarioId, passwordActual, passwordNueva) => {
+  const usuario = await authRepository.findByIdWithPassword(usuarioId);
+  if (!usuario || !usuario.activo) throw new AppError('Usuario no encontrado o inactivo', 401);
+
+  const coincide = await bcrypt.compare(passwordActual, usuario.passwordHash);
+  if (!coincide) throw new AppError('La contraseña actual es incorrecta', 401);
+
+  if (passwordActual === passwordNueva) {
+    throw new AppError('La nueva contraseña debe ser distinta de la actual', 422);
+  }
+
+  await authRepository.updatePassword(usuario, await hashPassword(passwordNueva));
+  revokeUserTokens(usuarioId);
+};
+
+module.exports = { login, refresh, logout, hashPassword, revokeUserTokens, getMe, changePassword };

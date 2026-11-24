@@ -34,13 +34,11 @@ const createCompraRules = [
     .notEmpty().withMessage('El proveedorId es requerido')
     .isInt({ min: 1 }).withMessage('El proveedorId debe ser un entero positivo'),
 
+  // Opcional: si falta se usa la sucursal del usuario.
+  // El empleado NO se envía: se toma del token.
   body('sucursalId')
-    .notEmpty().withMessage('El sucursalId es requerido')
+    .optional()
     .isInt({ min: 1 }).withMessage('El sucursalId debe ser un entero positivo'),
-
-  body('empleadoId')
-    .notEmpty().withMessage('El empleadoId es requerido')
-    .isInt({ min: 1 }).withMessage('El empleadoId debe ser un entero positivo'),
 
   detallesRule,
 ];

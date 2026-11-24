@@ -10,6 +10,9 @@ const COOKIE_OPTIONS = {
   maxAge:   7 * 24 * 60 * 60 * 1000,
 };
 
+// clearCookie no admite maxAge (obsoleto en Express 5)
+const { maxAge, ...CLEAR_COOKIE_OPTIONS } = COOKIE_OPTIONS;
+
 /**
  * POST /api/auth/login
  * Body: { nombreUsuario, password }
@@ -65,7 +68,7 @@ const logout = async (req, res, next) => {
   try {
     const token = req.cookies?.refreshToken || req.body?.refreshToken;
     authService.logout(token);
-    res.clearCookie('refreshToken', COOKIE_OPTIONS);
+    res.clearCookie('refreshToken', CLEAR_COOKIE_OPTIONS);
 
     return apiResponse.success(res, {
       statusCode: 200,
@@ -78,18 +81,40 @@ const logout = async (req, res, next) => {
 
 /**
  * GET /api/auth/me
- * Requiere authMiddleware — req.usuario ya está populado.
+ * Devuelve los datos actuales del usuario autenticado (leídos de la BD):
+ * perfil, empleado y sucursal.
  */
 const me = async (req, res, next) => {
   try {
+    const data = await authService.getMe(req.usuario.id);
     return apiResponse.success(res, {
       statusCode: 200,
       message: 'Usuario autenticado',
-      data: req.usuario,
+      data,
     });
   } catch (err) {
     next(err);
   }
 };
 
-module.exports = { login, refresh, logout, me };
+/**
+ * PATCH /api/auth/password
+ * Body: { passwordActual, passwordNueva }
+ * Cambia la contraseña propia y cierra todas las sesiones del usuario.
+ */
+const changePassword = async (req, res, next) => {
+  try {
+    const { passwordActual, passwordNueva } = req.body;
+    await authService.changePassword(req.usuario.id, passwordActual, passwordNueva);
+    res.clearCookie('refreshToken', CLEAR_COOKIE_OPTIONS);
+
+    return apiResponse.success(res, {
+      statusCode: 200,
+      message: 'Contraseña actualizada. Inicia sesión nuevamente.',
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { login, refresh, logout, me, changePassword };

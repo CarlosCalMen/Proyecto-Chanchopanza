@@ -1,6 +1,7 @@
 'use strict';
 
 const { Op, fn, col, literal } = require('sequelize');
+const { whereFechas, sqlFechaLocal } = require('../../helpers/dateRange');
 const {
   Orden, DetalleOrden, Producto,
   Compra, DetalleCompra, Insumo,
@@ -8,15 +9,8 @@ const {
   sequelize,
 } = require('../../config/db');
 
-// ── Helpers de rango de fechas ─────────────────────────────────────────────────
-
-const buildFechaWhere = (campo, fechaDesde, fechaHasta) => {
-  if (!fechaDesde && !fechaHasta) return {};
-  const rango = {};
-  if (fechaDesde) rango[Op.gte] = new Date(fechaDesde);
-  if (fechaHasta) rango[Op.lte] = new Date(`${fechaHasta}T23:59:59`);
-  return { [campo]: rango };
-};
+// Las fechas se interpretan en la zona horaria del negocio (APP_TIMEZONE).
+const buildFechaWhere = whereFechas;
 
 // ── Reportes de ventas ────────────────────────────────────────────────────────
 
@@ -28,7 +22,7 @@ const buildFechaWhere = (campo, fechaDesde, fechaHasta) => {
 const ventasPorSucursal = async ({ fechaDesde, fechaHasta, sucursalId } = {}) => {
   const where = {
     estado: 'completado',
-    ...buildFechaWhere('fechaDeOrden', fechaDesde, fechaHasta),
+    ...buildFechaWhere('fecha_de_orden', fechaDesde, fechaHasta),
   };
   if (sucursalId) where.sucursalId = sucursalId;
 
@@ -50,11 +44,12 @@ const ventasPorSucursal = async ({ fechaDesde, fechaHasta, sucursalId } = {}) =>
  * Resumen de ventas consolidado (todas las sucursales).
  * Retorna: totalOrdenes, totalIngresos, ticketPromedio
  */
-const ventasConsolidadas = async ({ fechaDesde, fechaHasta } = {}) => {
+const ventasConsolidadas = async ({ fechaDesde, fechaHasta, sucursalId } = {}) => {
   const where = {
     estado: 'completado',
-    ...buildFechaWhere('fechaDeOrden', fechaDesde, fechaHasta),
+    ...buildFechaWhere('fecha_de_orden', fechaDesde, fechaHasta),
   };
+  if (sucursalId) where.sucursalId = sucursalId;
 
   const result = await Orden.findOne({
     where,
@@ -79,7 +74,7 @@ const ventasConsolidadas = async ({ fechaDesde, fechaHasta } = {}) => {
 const productosMasVendidos = async ({ fechaDesde, fechaHasta, sucursalId, limit = 10 } = {}) => {
   const whereOrden = {
     estado: 'completado',
-    ...buildFechaWhere('fechaDeOrden', fechaDesde, fechaHasta),
+    ...buildFechaWhere('fecha_de_orden', fechaDesde, fechaHasta),
   };
   if (sucursalId) whereOrden.sucursalId = sucursalId;
 
@@ -112,7 +107,7 @@ const productosMasVendidos = async ({ fechaDesde, fechaHasta, sucursalId, limit 
 const ventasPorPeriodo = async ({ fechaDesde, fechaHasta, sucursalId, agrupacion = 'dia' } = {}) => {
   const where = {
     estado: 'completado',
-    ...buildFechaWhere('fechaDeOrden', fechaDesde, fechaHasta),
+    ...buildFechaWhere('fecha_de_orden', fechaDesde, fechaHasta),
   };
   if (sucursalId) where.sucursalId = sucursalId;
 
@@ -125,11 +120,11 @@ const ventasPorPeriodo = async ({ fechaDesde, fechaHasta, sucursalId, agrupacion
   return Orden.findAll({
     where,
     attributes: [
-      [fn('TO_CHAR', col('fecha_de_orden'), formatoSQL), 'periodo'],
+      [literal(`TO_CHAR(${sqlFechaLocal(sequelize, 'fecha_de_orden')}, '${formatoSQL}')`), 'periodo'],
       [fn('COUNT', col('id')),    'totalOrdenes'],
       [fn('SUM',   col('total')), 'totalIngresos'],
     ],
-    group: [literal(`TO_CHAR(fecha_de_orden, '${formatoSQL}')`)],
+    group: [literal(`TO_CHAR(${sqlFechaLocal(sequelize, 'fecha_de_orden')}, '${formatoSQL}')`)],
     order: [[literal('periodo'), 'ASC']],
     raw: true,
   });
@@ -144,7 +139,7 @@ const ventasPorPeriodo = async ({ fechaDesde, fechaHasta, sucursalId, agrupacion
 const comprasPorSucursal = async ({ fechaDesde, fechaHasta, sucursalId } = {}) => {
   const where = {
     estado: 'recibido',
-    ...buildFechaWhere('fechaDeCompra', fechaDesde, fechaHasta),
+    ...buildFechaWhere('fecha_de_compra', fechaDesde, fechaHasta),
   };
   if (sucursalId) where.sucursalId = sucursalId;
 
@@ -165,11 +160,12 @@ const comprasPorSucursal = async ({ fechaDesde, fechaHasta, sucursalId } = {}) =
 /**
  * Resumen de compras consolidado.
  */
-const comprasConsolidadas = async ({ fechaDesde, fechaHasta } = {}) => {
+const comprasConsolidadas = async ({ fechaDesde, fechaHasta, sucursalId } = {}) => {
   const where = {
     estado: 'recibido',
-    ...buildFechaWhere('fechaDeCompra', fechaDesde, fechaHasta),
+    ...buildFechaWhere('fecha_de_compra', fechaDesde, fechaHasta),
   };
+  if (sucursalId) where.sucursalId = sucursalId;
 
   const result = await Compra.findOne({
     where,
@@ -194,7 +190,7 @@ const comprasConsolidadas = async ({ fechaDesde, fechaHasta } = {}) => {
 const insumosMasComprados = async ({ fechaDesde, fechaHasta, sucursalId, limit = 10 } = {}) => {
   const whereCompra = {
     estado: 'recibido',
-    ...buildFechaWhere('fechaDeCompra', fechaDesde, fechaHasta),
+    ...buildFechaWhere('fecha_de_compra', fechaDesde, fechaHasta),
   };
   if (sucursalId) whereCompra.sucursalId = sucursalId;
 

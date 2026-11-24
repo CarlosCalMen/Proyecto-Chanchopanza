@@ -60,14 +60,20 @@ const getById = async (req, res, next) => {
 /**
  * POST /api/ordenes
  * Roles: admin, caja
- * Body: { clienteId, sucursalId, empleadoId, detalles: [{ productoId, cantidad }] }
+ * Body: { clienteId?, detalles: [{ productoId, cantidad }], sucursalId?, pagos? | metodoPago? }
+ * Sin clienteId la venta es al cliente mostrador ('Cliente Rápido').
+ * Si se envían los pagos, la orden se cobra y queda completada en la misma operación.
+ * El empleado se toma del token. El cajero siempre opera en su sucursal;
+ * el admin puede indicar sucursalId (si no, usa la suya).
  */
 const create = async (req, res, next) => {
   try {
     const orden = await ordenService.createOrden(req.body, req.usuario);
     return apiResponse.success(res, {
       statusCode: 201,
-      message: 'Orden creada correctamente',
+      message: orden.estado === 'completado'
+        ? 'Orden creada y cobrada correctamente'
+        : 'Orden creada correctamente',
       data: orden,
     });
   } catch (err) {
@@ -101,7 +107,7 @@ const update = async (req, res, next) => {
  *
  * Máquina de estados:
  *   pendiente  → en_proceso | cancelado
- *   en_proceso → completado | cancelado
+ *   en_proceso → cancelado
  *   completado → anulado  (solo admin)
  *   cancelado  → anulado  (solo admin)
  *   anulado    → (terminal, sin transición)
@@ -123,4 +129,25 @@ const cambiarEstado = async (req, res, next) => {
   }
 };
 
-module.exports = { list, getById, create, update, cambiarEstado };
+/**
+ * POST /api/ordenes/:id/pago
+ * Registra el cobro de la orden y la completa. Admite pago único o dividido.
+ * Roles: admin, caja
+ *
+ * Dividido:  { pagos: [{ metodoPago, monto, montoRecibido? }, ...] }  (suma = total)
+ * Único:     { metodoPago, montoRecibido? }                          (cubre el total)
+ */
+const pagar = async (req, res, next) => {
+  try {
+    const orden = await ordenService.registrarPago(req.params.id, req.body, req.usuario);
+    return apiResponse.success(res, {
+      statusCode: 201,
+      message: 'Cobro registrado y orden completada',
+      data: orden,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { list, getById, create, update, cambiarEstado, pagar };

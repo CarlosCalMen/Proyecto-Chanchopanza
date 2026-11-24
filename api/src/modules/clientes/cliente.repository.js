@@ -58,6 +58,13 @@ const hasOrdenes = async (clienteId) => {
   return count > 0;
 };
 
+/**
+ * Cliente mostrador: el cliente por defecto de las ventas sin datos del cliente.
+ */
+const findMostrador = async () => {
+  return Cliente.findOne({ where: { esMostrador: true } });
+};
+
 const create = async (data, options = {}) => {
   return Cliente.create(data, options);
 };
@@ -75,6 +82,7 @@ module.exports = {
   findAll,
   findById,
   findByEmail,
+  findMostrador,
   hasOrdenes,
   create,
   update,

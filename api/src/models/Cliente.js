@@ -27,6 +27,12 @@ class Cliente extends Model {
           unique: true,
           validate: { isEmail: true },
         },
+        esMostrador: {
+          type: DataTypes.BOOLEAN,
+          allowNull: false,
+          defaultValue: false,
+          comment: 'Cliente por defecto de las ventas sin datos del cliente (solo uno)',
+        },
       },
       {
         sequelize,

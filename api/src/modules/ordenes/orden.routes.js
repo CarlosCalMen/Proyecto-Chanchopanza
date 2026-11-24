@@ -48,7 +48,11 @@ router.get(
 /**
  * POST /api/ordenes
  * Roles: admin, caja
- * Body: { clienteId, sucursalId, empleadoId, detalles: [{ productoId, cantidad }] }
+ * Body: { clienteId?, detalles: [{ productoId, cantidad }], sucursalId?, pagos? | metodoPago? }
+ * Sin clienteId la venta es al cliente mostrador ('Cliente Rápido').
+ * Con pagos (mismo formato que /:id/pago) crea, cobra y completa en UNA operación:
+ * todo o nada (orden, stock y cobro).
+ * El empleado sale del token. Reserva el stock de insumos según las recetas.
  */
 router.post(
   '/',
@@ -79,13 +83,14 @@ router.put(
  * Body: { estado: string }
  *
  * Flujo del cajero:
- *   pendiente → en_proceso → completado
- *   pendiente → cancelado
- *   en_proceso → cancelado
+ *   pendiente → en_proceso
+ *   pendiente | en_proceso → cancelado   (devuelve el stock)
  *
  * Exclusivo admin:
- *   completado → anulado
+ *   completado → anulado   (devuelve el stock y anula el cobro)
  *   cancelado  → anulado
+ *
+ * 'completado' NO se asigna aquí: ocurre al cobrar (POST /:id/pago).
  */
 router.patch(
   '/:id/estado',
@@ -93,6 +98,32 @@ router.patch(
   validation.cambiarEstadoRules,
   validateMiddleware,
   ordenController.cambiarEstado
+);
+
+/**
+ * POST /api/ordenes/:id/pago
+ * Roles: admin, caja
+ *
+ * Cobro dividido (varios métodos; la suma de los montos debe ser el total):
+ *   { "pagos": [
+ *       { "metodoPago": "efectivo", "monto": 30, "montoRecibido": 50 },
+ *       { "metodoPago": "tarjeta",  "monto": 20 },
+ *       { "metodoPago": "yape",     "monto": 8 }
+ *   ] }
+ *
+ * Pago único (formato anterior):
+ *   { "metodoPago": "efectivo", "montoRecibido": 100 }
+ *
+ * Métodos: efectivo | tarjeta | yape | plin | transferencia.
+ * Es todo o nada: si algo falla no queda ningún pago registrado.
+ * Solo se puede cobrar una orden 'pendiente' o 'en_proceso'.
+ */
+router.post(
+  '/:id/pago',
+  roleMiddleware('admin', 'caja'),
+  validation.pagoRules,
+  validateMiddleware,
+  ordenController.pagar
 );
 
 module.exports = router;

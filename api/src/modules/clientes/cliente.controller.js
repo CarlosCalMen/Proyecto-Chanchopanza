@@ -25,6 +25,24 @@ const list = async (req, res, next) => {
 };
 
 /**
+ * GET /api/clientes/mostrador
+ * Devuelve el cliente por defecto de las ventas ('Cliente Rápido').
+ * Roles: admin, socio, caja
+ */
+const getMostrador = async (req, res, next) => {
+  try {
+    const cliente = await clienteService.getClienteMostrador();
+    return apiResponse.success(res, {
+      statusCode: 200,
+      message: 'Cliente mostrador obtenido correctamente',
+      data: cliente,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
  * GET /api/clientes/:id
  * Roles: admin, socio, caja
  */
@@ -93,4 +111,4 @@ const remove = async (req, res, next) => {
   }
 };
 
-module.exports = { list, getById, create, update, remove };
+module.exports = { list, getMostrador, getById, create, update, remove };

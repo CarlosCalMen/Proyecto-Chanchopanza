@@ -38,7 +38,7 @@ module.exports = {
       {
         perfil_id:     perfilId('socio'),
         nombre_usuario:'socio',
-        password_hash: '$2b$12$I.cBaqEJQjVT6uJa4oHo8uYc1S4bpZf8NpH3mpnHWFUgPLQkG5hVm',
+        password_hash: '$2a$12$HDSPVLJHVVq5nvINzYVmOukCXgAl2ae4k8oVECkMMg5rK.QLIZwne',
         activo:        true,
         created_at:    new Date(),
         updated_at:    new Date(),
@@ -46,7 +46,7 @@ module.exports = {
       {
         perfil_id:     perfilId('caja'),
         nombre_usuario:'cajero',
-        password_hash: '$2b$12$RNhkc5y2e3XHzHj6ACEqNuj5bP4P2cQp3TkJPOFv5BidVuLMqsS3a',
+        password_hash: '$2a$12$5iJ5Zcu3HUsgYMwOEjzl2..K6GzEYwT96TQB.oxnqfFk.lt0BWkoi',
         activo:        true,
         created_at:    new Date(),
         updated_at:    new Date(),

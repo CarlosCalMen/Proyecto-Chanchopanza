@@ -3,8 +3,9 @@
 const { Op }    = require('sequelize');
 const {
   Orden, DetalleOrden, Producto,
-  Cliente, Empleado, Sucursal, sequelize,
+  Cliente, Empleado, Sucursal, Pago, sequelize,
 } = require('../../config/db');
+const { whereFechas } = require('../../helpers/dateRange');
 
 // ── Includes reutilizables ────────────────────────────────────────────────────
 
@@ -16,6 +17,11 @@ const includeCompleto = [
     model: DetalleOrden,
     as: 'detalles',
     include: [{ model: Producto, as: 'producto', attributes: ['id', 'nombre', 'precioVenta'] }],
+  },
+  {
+    model: Pago,
+    as: 'pagos',
+    attributes: ['id', 'metodoPago', 'monto', 'montoRecibido', 'vuelto', 'estado', 'fechaDePago', 'empleadoId'],
   },
 ];
 
@@ -42,11 +48,7 @@ const findAll = async ({
   if (empleadoId) where.empleadoId = empleadoId;
   if (estado)     where.estado     = estado;
 
-  if (fechaDesde || fechaHasta) {
-    where.fechaDeOrden = {};
-    if (fechaDesde) where.fechaDeOrden[Op.gte] = new Date(fechaDesde);
-    if (fechaHasta) where.fechaDeOrden[Op.lte] = new Date(`${fechaHasta}T23:59:59`);
-  }
+  Object.assign(where, whereFechas('fecha_de_orden', fechaDesde, fechaHasta));
 
   return Orden.findAndCountAll({
     where,
@@ -100,8 +102,36 @@ const deleteDetalles = async (ordenId, transaction) => {
   return DetalleOrden.destroy({ where: { ordenId }, transaction });
 };
 
+/**
+ * Lee la orden SIN joins y bloqueando su fila (SELECT ... FOR UPDATE).
+ * Evita que dos cobros o cambios de estado simultáneos se pisen.
+ */
+const findByIdForUpdate = async (id, transaction) => {
+  return Orden.findByPk(id, { transaction, lock: transaction.LOCK.UPDATE });
+};
+
+/**
+ * Registra TODOS los pagos de una orden de una vez (cobro simple o dividido).
+ */
+const createPagos = async (pagos, transaction) => {
+  return Pago.bulkCreate(pagos, { transaction });
+};
+
+/**
+ * Anula los cobros vigentes de una orden (cuando la orden se anula).
+ */
+const anularPagos = async (ordenId, transaction) => {
+  return Pago.update(
+    { estado: 'anulado' },
+    { where: { ordenId, estado: 'registrado' }, transaction }
+  );
+};
+
 module.exports = {
   sequelize,
+  findByIdForUpdate,
+  createPagos,
+  anularPagos,
   findAll,
   findById,
   create,
